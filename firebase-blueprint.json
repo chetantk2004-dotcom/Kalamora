@@ -1,0 +1,110 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Authenticated author profile and interface preferences (strictly owner-private to protect PII).",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Auth UID matching the document ID." },
+        "displayName": { "type": "string", "description": "Author display name." },
+        "username": { "type": "string", "description": "Unique handle for the writer." },
+        "email": { "type": "string", "description": "Email address from Google Sign-In." },
+        "photoURL": { "type": "string", "description": "Optional profile avatar URL or compact data URI." },
+        "bio": { "type": "string", "description": "Optional short literary bio." },
+        "preferredLanguage": { "type": "string", "enum": ["en", "hi"], "description": "Interface language code." },
+        "darkMode": { "type": "boolean", "description": "Optional preferred theme flag." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp of account creation (FieldValue.serverTimestamp())." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp of last update (FieldValue.serverTimestamp())." }
+      },
+      "required": ["uid", "displayName", "username", "email", "preferredLanguage", "createdAt", "updatedAt"]
+    },
+    "Book": {
+      "title": "Book",
+      "description": "A book project authored by a user, either private draft or explicitly published public work.",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string", "description": "Firebase Auth UID of the book author." },
+        "title": { "type": "string", "description": "Book title." },
+        "subtitle": { "type": "string", "description": "Optional book subtitle." },
+        "description": { "type": "string", "description": "Book synopsis or description." },
+        "authorName": { "type": "string", "description": "Author pen name displayed to readers." },
+        "category": {
+          "type": "string",
+          "enum": ["Fiction", "Non-fiction", "Romance", "Mystery", "Biography", "Travel", "History", "Adventure", "Self-help", "Philosophy", "Other"],
+          "description": "Literary genre category."
+        },
+        "language": { "type": "string", "description": "Writing language (e.g. English, Hindi, Hinglish, Urdu)." },
+        "coverURL": { "type": "string", "description": "Optional cover image URL or compressed base64 thumbnail." },
+        "coverTheme": { "type": "string", "description": "Curated cover aesthetic theme key." },
+        "visibility": { "type": "string", "enum": ["private", "public"], "description": "Access visibility; always defaults to private." },
+        "status": { "type": "string", "enum": ["draft", "published"], "description": "Publication status aligned with visibility." },
+        "chapterCount": { "type": "integer", "description": "Total number of chapters in the book." },
+        "totalWordCount": { "type": "integer", "description": "Aggregated word count across all chapters." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp of creation (FieldValue.serverTimestamp())." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp of last modification (FieldValue.serverTimestamp())." },
+        "publishedAt": { "type": "string", "format": "date-time", "description": "Optional server timestamp when published." }
+      },
+      "required": ["ownerId", "title", "description", "authorName", "category", "language", "coverTheme", "visibility", "status", "chapterCount", "totalWordCount", "createdAt", "updatedAt"]
+    },
+    "Chapter": {
+      "title": "Chapter",
+      "description": "An ordered chapter belonging to a book, with denormalized ownerId and bookVisibility for fast, secure list queries.",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string", "description": "Denormalized author UID matching parent book." },
+        "bookId": { "type": "string", "description": "Parent book document ID." },
+        "bookVisibility": { "type": "string", "enum": ["private", "public"], "description": "Denormalized parent book visibility kept in sync atomically." },
+        "title": { "type": "string", "description": "Chapter title." },
+        "content": { "type": "string", "description": "Structured rich text chapter body preserving Unicode and formatting." },
+        "chapterOrder": { "type": "integer", "description": "Zero-based display ordering index." },
+        "wordCount": { "type": "integer", "description": "Chapter word count." },
+        "characterCount": { "type": "integer", "description": "Chapter character count." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp of creation (FieldValue.serverTimestamp())." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp of last save (FieldValue.serverTimestamp())." }
+      },
+      "required": ["ownerId", "bookId", "bookVisibility", "title", "content", "chapterOrder", "wordCount", "characterCount", "createdAt", "updatedAt"]
+    },
+    "Shayari": {
+      "title": "Shayari",
+      "description": "A poem or shayari preserving exact line breaks, stanza spacing, and Unicode characters.",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string", "description": "Firebase Auth UID of the poet." },
+        "authorName": { "type": "string", "description": "Poet pen name." },
+        "title": { "type": "string", "description": "Shayari or poem title." },
+        "content": { "type": "string", "description": "Original verbatim poetry lines with preserved line breaks." },
+        "category": {
+          "type": "string",
+          "enum": ["Love", "Sadness", "Friendship", "Life", "Motivation", "Patriotism", "Loneliness", "Nature", "Philosophy", "Other"],
+          "description": "Poetry theme category."
+        },
+        "language": { "type": "string", "description": "Writing language (Hindi, English, Urdu, etc.)." },
+        "visibility": { "type": "string", "enum": ["private", "public"], "description": "Access visibility; always defaults to private." },
+        "status": { "type": "string", "enum": ["draft", "published"], "description": "Publication status aligned with visibility." },
+        "wordCount": { "type": "integer", "description": "Word count of the shayari." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp of creation (FieldValue.serverTimestamp())." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp of last save (FieldValue.serverTimestamp())." },
+        "publishedAt": { "type": "string", "format": "date-time", "description": "Optional server timestamp when published." }
+      },
+      "required": ["ownerId", "authorName", "title", "content", "category", "language", "visibility", "status", "wordCount", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Owner-private author profile and settings."
+    },
+    "/books/{bookId}": {
+      "schema": { "$ref": "#/entities/Book" },
+      "description": "Author books with private draft or explicitly published public visibility."
+    },
+    "/books/{bookId}/chapters/{chapterId}": {
+      "schema": { "$ref": "#/entities/Chapter" },
+      "description": "Ordered chapters nested under each book."
+    },
+    "/shayari/{shayariId}": {
+      "schema": { "$ref": "#/entities/Shayari" },
+      "description": "Poetry and shayari documents with private or public visibility."
+    }
+  }
+}

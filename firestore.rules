@@ -1,0 +1,298 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Primitive Helpers ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function isValidTimestamp(ts) {
+      return ts is timestamp && ts <= request.time;
+    }
+
+    // --- Entity Validation Helpers (Anti-Update-Gap) ---
+    function isValidUserProfile(data) {
+      return data.uid is string && data.uid == request.auth.uid && data.uid.size() >= 1 && data.uid.size() <= 128 &&
+             data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 100 &&
+             data.username is string && data.username.size() >= 2 && data.username.size() <= 40 &&
+             data.email is string && data.email.size() <= 254 &&
+             (!('photoURL' in data) || data.photoURL == null || (data.photoURL is string && data.photoURL.size() <= 250000)) &&
+             (!('bio' in data) || data.bio == null || (data.bio is string && data.bio.size() <= 300)) &&
+             data.preferredLanguage is string && data.preferredLanguage in ['en', 'hi'] &&
+             (!('darkMode' in data) || data.darkMode is bool) &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidBookCategory(cat) {
+      return cat is string && cat in [
+        'Fiction', 'Non-fiction', 'Romance', 'Mystery', 'Biography',
+        'Travel', 'History', 'Adventure', 'Self-help', 'Philosophy', 'Other'
+      ];
+    }
+
+    function isValidVisibilityStatus(data) {
+      return (data.visibility == 'private' && data.status == 'draft') ||
+             (data.visibility == 'public' && data.status == 'published');
+    }
+
+    function isValidBook(data) {
+      return data.ownerId is string && data.ownerId == request.auth.uid && data.ownerId.size() >= 1 && data.ownerId.size() <= 128 &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 160 &&
+             (!('subtitle' in data) || data.subtitle == null || (data.subtitle is string && data.subtitle.size() <= 200)) &&
+             data.description is string && data.description.size() <= 2000 &&
+             data.authorName is string && data.authorName.size() >= 1 && data.authorName.size() <= 100 &&
+             isValidBookCategory(data.category) &&
+             data.language is string && data.language.size() >= 1 && data.language.size() <= 40 &&
+             (!('coverURL' in data) || data.coverURL == null || (data.coverURL is string && data.coverURL.size() <= 250000)) &&
+             data.coverTheme is string && data.coverTheme.size() >= 1 && data.coverTheme.size() <= 40 &&
+             isValidVisibilityStatus(data) &&
+             data.chapterCount is int && data.chapterCount >= 0 && data.chapterCount <= 500 &&
+             data.totalWordCount is int && data.totalWordCount >= 0 && data.totalWordCount <= 5000000 &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt) &&
+             (!('publishedAt' in data) || data.publishedAt == null || isValidTimestamp(data.publishedAt));
+    }
+
+    function isValidChapter(data, bookId) {
+      return data.ownerId is string && data.ownerId == request.auth.uid && data.ownerId.size() >= 1 && data.ownerId.size() <= 128 &&
+             data.bookId is string && data.bookId == bookId &&
+             data.bookVisibility is string && data.bookVisibility in ['private', 'public'] &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 200 &&
+             data.content is string && data.content.size() <= 200000 &&
+             data.chapterOrder is int && data.chapterOrder >= 0 && data.chapterOrder <= 10000 &&
+             data.wordCount is int && data.wordCount >= 0 && data.wordCount <= 200000 &&
+             data.characterCount is int && data.characterCount >= 0 && data.characterCount <= 200000 &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidShayariCategory(cat) {
+      return cat is string && cat in [
+        'Love', 'Sadness', 'Friendship', 'Life', 'Motivation',
+        'Patriotism', 'Loneliness', 'Nature', 'Philosophy', 'Other'
+      ];
+    }
+
+    function isValidShayari(data) {
+      return data.ownerId is string && data.ownerId == request.auth.uid && data.ownerId.size() >= 1 && data.ownerId.size() <= 128 &&
+             data.authorName is string && data.authorName.size() >= 1 && data.authorName.size() <= 100 &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 160 &&
+             data.content is string && data.content.size() >= 1 && data.content.size() <= 50000 &&
+             isValidShayariCategory(data.category) &&
+             data.language is string && data.language.size() >= 1 && data.language.size() <= 40 &&
+             isValidVisibilityStatus(data) &&
+             data.wordCount is int && data.wordCount >= 0 && data.wordCount <= 50000 &&
+             isValidTimestamp(data.createdAt) &&
+             isValidTimestamp(data.updatedAt) &&
+             (!('publishedAt' in data) || data.publishedAt == null || isValidTimestamp(data.publishedAt));
+    }
+
+    // --- Collection 1: Users (PII-isolated, strictly owner-only) ---
+    match /users/{userId} {
+      allow get: if isOwner(userId) && isValidId(userId);
+      allow list: if false;
+
+      allow create: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       incoming().keys().hasAll(['uid', 'displayName', 'username', 'email', 'preferredLanguage', 'createdAt', 'updatedAt']) &&
+                       incoming().keys().hasOnly(['uid', 'displayName', 'username', 'email', 'photoURL', 'bio', 'preferredLanguage', 'darkMode', 'createdAt', 'updatedAt']) &&
+                       isValidUserProfile(incoming());
+
+      allow update: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       isValidUserProfile(incoming()) &&
+                       incoming().uid == existing().uid &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'displayName', 'username', 'email', 'photoURL', 'bio', 'preferredLanguage', 'darkMode', 'updatedAt'
+                       ]);
+
+      allow delete: if isOwner(userId) && isValidId(userId);
+    }
+
+    // --- Collection 2: Books ---
+    match /books/{bookId} {
+      allow get: if isSignedIn() &&
+                    isValidId(bookId) &&
+                    (existing().ownerId == request.auth.uid ||
+                     (existing().visibility == 'public' && existing().status == 'published'));
+
+      allow list: if isSignedIn() &&
+                     (existing().ownerId == request.auth.uid ||
+                      (existing().visibility == 'public' && existing().status == 'published'));
+
+      allow create: if isSignedIn() &&
+                       isValidId(bookId) &&
+                       incoming().keys().hasAll([
+                         'ownerId', 'title', 'description', 'authorName', 'category', 'language',
+                         'coverTheme', 'visibility', 'status', 'chapterCount', 'totalWordCount',
+                         'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'ownerId', 'title', 'subtitle', 'description', 'authorName', 'category', 'language',
+                         'coverURL', 'coverTheme', 'visibility', 'status', 'chapterCount', 'totalWordCount',
+                         'createdAt', 'updatedAt', 'publishedAt'
+                       ]) &&
+                       isValidBook(incoming());
+
+      allow update: if isSignedIn() &&
+                       isValidId(bookId) &&
+                       isValidBook(incoming()) &&
+                       existing().ownerId == request.auth.uid &&
+                       incoming().ownerId == existing().ownerId &&
+                       incoming().createdAt == existing().createdAt &&
+                       (
+                         // Action: Edit book metadata
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'title', 'subtitle', 'description', 'authorName', 'category',
+                           'language', 'coverURL', 'coverTheme', 'updatedAt'
+                         ]) ||
+                         // Action: Sync chapter count and total word count
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'chapterCount', 'totalWordCount', 'updatedAt'
+                         ]) ||
+                         // Action: Publish or unpublish book
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'visibility', 'status', 'publishedAt', 'updatedAt'
+                         ])
+                       );
+
+      allow delete: if isSignedIn() &&
+                       isValidId(bookId) &&
+                       existing().ownerId == request.auth.uid;
+
+      // --- Subcollection: Chapters ---
+      match /chapters/{chapterId} {
+        allow get: if isSignedIn() &&
+                      isValidId(bookId) &&
+                      isValidId(chapterId) &&
+                      (existing().ownerId == request.auth.uid ||
+                       (existing().bookVisibility == 'public' &&
+                        get(/databases/$(database)/documents/books/$(bookId)).data.visibility == 'public' &&
+                        get(/databases/$(database)/documents/books/$(bookId)).data.status == 'published'));
+
+        allow list: if isSignedIn() &&
+                       (existing().ownerId == request.auth.uid ||
+                        existing().bookVisibility == 'public');
+
+        allow create: if isSignedIn() &&
+                         isValidId(bookId) &&
+                         isValidId(chapterId) &&
+                         incoming().keys().hasAll([
+                           'ownerId', 'bookId', 'bookVisibility', 'title', 'content',
+                           'chapterOrder', 'wordCount', 'characterCount', 'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'ownerId', 'bookId', 'bookVisibility', 'title', 'content',
+                           'chapterOrder', 'wordCount', 'characterCount', 'createdAt', 'updatedAt'
+                         ]) &&
+                         isValidChapter(incoming(), bookId) &&
+                         existsAfter(/databases/$(database)/documents/books/$(bookId)) &&
+                         getAfter(/databases/$(database)/documents/books/$(bookId)).data.ownerId == request.auth.uid &&
+                         incoming().bookVisibility == getAfter(/databases/$(database)/documents/books/$(bookId)).data.visibility;
+
+        allow update: if isSignedIn() &&
+                         isValidId(bookId) &&
+                         isValidId(chapterId) &&
+                         isValidChapter(incoming(), bookId) &&
+                         existing().ownerId == request.auth.uid &&
+                         incoming().ownerId == existing().ownerId &&
+                         incoming().bookId == existing().bookId &&
+                         incoming().createdAt == existing().createdAt &&
+                         (
+                           // Action: Edit chapter title/content & stats
+                           incoming().diff(existing()).affectedKeys().hasOnly([
+                             'title', 'content', 'wordCount', 'characterCount', 'updatedAt'
+                           ]) ||
+                           // Action: Reorder chapter
+                           incoming().diff(existing()).affectedKeys().hasOnly([
+                             'chapterOrder', 'updatedAt'
+                           ]) ||
+                           // Action: Sync visibility with parent book publish/unpublish
+                           incoming().diff(existing()).affectedKeys().hasOnly([
+                             'bookVisibility', 'updatedAt'
+                           ])
+                         );
+
+        allow delete: if isSignedIn() &&
+                         isValidId(bookId) &&
+                         isValidId(chapterId) &&
+                         existing().ownerId == request.auth.uid;
+      }
+    }
+
+    // --- Collection 3: Shayari ---
+    match /shayari/{shayariId} {
+      allow get: if isSignedIn() &&
+                    isValidId(shayariId) &&
+                    (existing().ownerId == request.auth.uid ||
+                     (existing().visibility == 'public' && existing().status == 'published'));
+
+      allow list: if isSignedIn() &&
+                     (existing().ownerId == request.auth.uid ||
+                      (existing().visibility == 'public' && existing().status == 'published'));
+
+      allow create: if isSignedIn() &&
+                       isValidId(shayariId) &&
+                       incoming().keys().hasAll([
+                         'ownerId', 'authorName', 'title', 'content', 'category', 'language',
+                         'visibility', 'status', 'wordCount', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'ownerId', 'authorName', 'title', 'content', 'category', 'language',
+                         'visibility', 'status', 'wordCount', 'createdAt', 'updatedAt', 'publishedAt'
+                       ]) &&
+                       isValidShayari(incoming());
+
+      allow update: if isSignedIn() &&
+                       isValidId(shayariId) &&
+                       isValidShayari(incoming()) &&
+                       existing().ownerId == request.auth.uid &&
+                       incoming().ownerId == existing().ownerId &&
+                       incoming().createdAt == existing().createdAt &&
+                       (
+                         // Action: Edit shayari content & metadata
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'authorName', 'title', 'content', 'category', 'language', 'wordCount', 'updatedAt'
+                         ]) ||
+                         // Action: Publish or unpublish shayari
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'visibility', 'status', 'publishedAt', 'updatedAt'
+                         ]) ||
+                         // Action: Combined save & visibility update from Shayari Studio
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'authorName', 'title', 'content', 'category', 'language', 'wordCount',
+                           'visibility', 'status', 'publishedAt', 'updatedAt'
+                         ])
+                       );
+
+      allow delete: if isSignedIn() &&
+                       isValidId(shayariId) &&
+                       existing().ownerId == request.auth.uid;
+    }
+  }
+}
