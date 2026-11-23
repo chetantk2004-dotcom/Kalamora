@@ -1,7 +1,9 @@
+# IDE & OS
 *.iml
 .gradle
 .kotlin
 /local.properties
+local.properties
 /.idea/caches
 /.idea/libraries
 /.idea/modules.xml
@@ -9,12 +11,44 @@
 /.idea/navEditor.xml
 /.idea/assetWizardSettings.xml
 .DS_Store
+Thumbs.db
+
+# Android Build Outputs
 /build
+/app/build
 /captures
 .externalNativeBuild
 .cxx
-local.properties
-.env
-debug.keystore
+*.apk
+*.aab
+*.ap_
+*.dex
 *-debug.log
 
+# Secrets & Environment Variables (NEVER commit secrets)
+.env
+.env.*
+!.env.example
+secrets.properties
+signing.properties
+keystore.properties
+
+# Keystores & Signing Credentials (NEVER commit signing keys)
+*.jks
+*.keystore
+*.p12
+*.pk8
+*.pem
+*.key
+debug.keystore
+debug.keystore.base64
+my-upload-key.jks
+
+# Firebase Service Account Private Keys (NEVER commit admin keys)
+*service-account*.json
+*serviceAccount*.json
+*firebase-adminsdk*.json
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+.firebase/

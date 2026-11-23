@@ -7,4 +7,8 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+    <color name="kalamora_deep_indigo">#FF302B63</color>
+    <color name="kalamora_warm_cream">#FFF7F3EB</color>
+    <color name="kalamora_muted_gold">#FFC6A15B</color>
+    <color name="kalamora_soft_off_white">#FFFCFBF8</color>
 </resources>
