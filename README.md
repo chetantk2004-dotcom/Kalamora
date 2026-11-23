@@ -24,20 +24,30 @@
 | --- | --- |
 | App Name | `Kalamora` |
 | Version Name / Code | `1.0.0` / `1` |
-| Current Application ID | `com.aistudio.kalamora.vkpqzx` (bound to current Firebase `app/google-services.json`) |
+| Application ID | `com.kalamora.app` (registered in Firebase `app/google-services.json`) |
+| Android App Module Directory | `app/` (`app/google-services.json`) |
 | Min SDK / Target SDK | API 24 (Android 7.0) / API 36 (Android 16) |
 | Default Orientation | Portrait (`android:screenOrientation="portrait"`) |
 | Splash Screen | Native Deep Indigo launch screen + Android 12+ Splash Screen API (`values-v31/themes.xml`) |
 | Gradle / AGP / JDK | Gradle `9.3.1` / AGP `9.1.1` / JDK `17` |
 
-### Switching Application ID to `com.kalamora.app` (Optional for Play Store)
+### Firebase `google-services.json` in GitHub Actions
 
-The project currently keeps `applicationId = "com.aistudio.kalamora.vkpqzx"` because your Firebase OAuth 2.0 Android client and SHA-1 fingerprint in `app/google-services.json` are registered for that package ID. To migrate to `com.kalamora.app` before publishing to Google Play:
+Both workflows check for `app/google-services.json` before running Gradle:
 
-1. Open **Firebase Console** -> **Project Settings** -> **Your apps** -> **Add app (Android)**.
-2. Register package name `com.kalamora.app` along with your **debug** and **release** SHA-1 and SHA-256 certificate fingerprints.
-3. Download the updated `google-services.json` and replace `app/google-services.json`.
-4. Update `applicationId = "com.kalamora.app"` in `app/build.gradle.kts` (leave `namespace = "com.example"` unchanged).
+1. If `app/google-services.json` is already present in the repository, the workflow uses it directly without overwriting it.
+2. Otherwise, it decodes the **`GOOGLE_SERVICES_JSON_BASE64`** GitHub Actions secret into `app/google-services.json` and validates that it contains an Android client for `com.kalamora.app`.
+3. If neither exists, the workflow stops immediately with setup instructions.
+
+To configure `GOOGLE_SERVICES_JSON_BASE64`:
+```bash
+# Linux
+base64 -w 0 app/google-services.json
+
+# macOS
+base64 -i app/google-services.json | tr -d '\n'
+```
+Then add the output as a repository secret named **`GOOGLE_SERVICES_JSON_BASE64`** in **GitHub Repository -> Settings -> Secrets and variables -> Actions**.
 
 ---
 

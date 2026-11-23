@@ -87,24 +87,36 @@ jobs:
             cp .env.example .env
           fi
 
-      - name: Configure google-services.json (optional secret override)
+      - name: Configure Firebase google-services.json
         env:
           GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
         run: |
-          if [ ! -f app/google-services.json ] && [ -n "$GOOGLE_SERVICES_JSON_BASE64" ]; then
-            echo "$GOOGLE_SERVICES_JSON_BASE64" | base64 --decode > app/google-services.json
-          fi
-          if [ ! -f app/google-services.json ]; then
-            echo "::error::app/google-services.json is required for Firebase release builds."
+          TARGET_FILE="app/google-services.json"
+          if [ -f "$TARGET_FILE" ] && [ -s "$TARGET_FILE" ]; then
+            echo "Using existing Firebase configuration present at $TARGET_FILE."
+          elif [ -n "$GOOGLE_SERVICES_JSON_BASE64" ]; then
+            mkdir -p app
+            printf '%s' "$GOOGLE_SERVICES_JSON_BASE64" | tr -d '\r\n' | base64 --decode > "$TARGET_FILE"
+            echo "DECODED_GOOGLE_SERVICES=true" >> "$GITHUB_ENV"
+            echo "Decoded Firebase configuration to $TARGET_FILE from GOOGLE_SERVICES_JSON_BASE64 secret."
+          else
+            echo "::error::Missing Firebase configuration: neither app/google-services.json nor the GitHub Actions secret GOOGLE_SERVICES_JSON_BASE64 was found."
+            echo "Download google-services.json for package 'com.kalamora.app' from Firebase Console, base64-encode it, and store it as secret GOOGLE_SERVICES_JSON_BASE64."
             exit 1
           fi
+
+          if ! jq -e '.project_info.project_id and ([.client[].client_info.android_client_info.package_name] | index("com.kalamora.app") != null)' "$TARGET_FILE" >/dev/null 2>&1; then
+            echo "::error::app/google-services.json is invalid JSON or does not contain an Android client for package 'com.kalamora.app'."
+            exit 1
+          fi
+          echo "Verified app/google-services.json contains a valid Firebase client entry for com.kalamora.app."
 
       - name: Decode upload keystore from GitHub Secret
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
           STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
         run: |
-          echo "$KEYSTORE_BASE64" | base64 --decode > "${GITHUB_WORKSPACE}/my-upload-key.jks"
+          printf '%s' "$KEYSTORE_BASE64" | tr -d '\r\n' | base64 --decode > "${GITHUB_WORKSPACE}/my-upload-key.jks"
           chmod 600 "${GITHUB_WORKSPACE}/my-upload-key.jks"
           keytool -list -keystore "${GITHUB_WORKSPACE}/my-upload-key.jks" -storepass "$STORE_PASSWORD" -alias upload >/dev/null
 
@@ -115,9 +127,9 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           if [ -f ./gradlew ]; then
-            ./gradlew :app:assembleRelease --no-daemon --stacktrace
+            ./gradlew :app:processReleaseGoogleServices :app:assembleRelease --no-daemon --stacktrace
           else
-            gradle :app:assembleRelease --no-daemon --stacktrace
+            gradle :app:processReleaseGoogleServices :app:assembleRelease --no-daemon --stacktrace
           fi
 
       - name: Build Signed Release AAB (optional)
@@ -167,6 +179,10 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      - name: Clean up signing keystore from runner
+      - name: Clean up temporary CI secrets and signing keystore
         if: always()
-        run: rm -f "${GITHUB_WORKSPACE}/my-upload-key.jks"
+        run: |
+          rm -f "${GITHUB_WORKSPACE}/my-upload-key.jks"
+          if [ "${DECODED_GOOGLE_SERVICES:-false}" = "true" ]; then
+            rm -f app/google-services.json
+          fi

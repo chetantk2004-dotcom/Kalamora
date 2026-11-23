@@ -57,23 +57,39 @@ jobs:
             cp .env.example .env
           fi
 
-      - name: Configure google-services.json (optional secret override)
+      - name: Configure Firebase google-services.json
         env:
           GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.GOOGLE_SERVICES_JSON_BASE64 }}
         run: |
-          if [ ! -f app/google-services.json ] && [ -n "$GOOGLE_SERVICES_JSON_BASE64" ]; then
-            echo "$GOOGLE_SERVICES_JSON_BASE64" | base64 --decode > app/google-services.json
+          TARGET_FILE="app/google-services.json"
+          if [ -f "$TARGET_FILE" ] && [ -s "$TARGET_FILE" ]; then
+            echo "Using existing Firebase configuration present at $TARGET_FILE."
+          elif [ -n "$GOOGLE_SERVICES_JSON_BASE64" ]; then
+            mkdir -p app
+            printf '%s' "$GOOGLE_SERVICES_JSON_BASE64" | tr -d '\r\n' | base64 --decode > "$TARGET_FILE"
+            echo "DECODED_GOOGLE_SERVICES=true" >> "$GITHUB_ENV"
+            echo "Decoded Firebase configuration to $TARGET_FILE from GOOGLE_SERVICES_JSON_BASE64 secret."
+          else
+            echo "::error::Missing Firebase configuration: neither app/google-services.json nor the GitHub Actions secret GOOGLE_SERVICES_JSON_BASE64 was found."
+            echo "To fix this:"
+            echo "  1. Download google-services.json for package 'com.kalamora.app' from Firebase Console -> Project Settings -> Your apps -> Android."
+            echo "  2. Base64-encode it: base64 -w 0 google-services.json (Linux) or base64 -i google-services.json | tr -d '\n' (macOS)."
+            echo "  3. Add it as a repository secret named GOOGLE_SERVICES_JSON_BASE64 in GitHub -> Settings -> Secrets and variables -> Actions."
+            exit 1
           fi
-          if [ ! -f app/google-services.json ]; then
-            echo "::warning::app/google-services.json not found. Firebase Auth and Firestore require a valid Firebase configuration."
+
+          if ! jq -e '.project_info.project_id and ([.client[].client_info.android_client_info.package_name] | index("com.kalamora.app") != null)' "$TARGET_FILE" >/dev/null 2>&1; then
+            echo "::error::app/google-services.json is invalid JSON or does not contain an Android client for package 'com.kalamora.app'."
+            exit 1
           fi
+          echo "Verified app/google-services.json contains a valid Firebase client entry for com.kalamora.app."
 
       - name: Prepare debug signing keystore
         env:
           DEBUG_KEYSTORE_BASE64: ${{ secrets.DEBUG_KEYSTORE_BASE64 }}
         run: |
           if [ -n "$DEBUG_KEYSTORE_BASE64" ]; then
-            echo "$DEBUG_KEYSTORE_BASE64" | base64 --decode > debug.keystore
+            printf '%s' "$DEBUG_KEYSTORE_BASE64" | tr -d '\r\n' | base64 --decode > debug.keystore
             chmod 600 debug.keystore
             echo "Restored debug.keystore from DEBUG_KEYSTORE_BASE64 secret."
           elif [ ! -f debug.keystore ]; then
@@ -90,12 +106,12 @@ jobs:
             chmod 600 debug.keystore
           fi
 
-      - name: Build Android Debug APK
+      - name: Verify Google Services processing and build Debug APK
         run: |
           if [ -f ./gradlew ]; then
-            ./gradlew :app:assembleDebug --no-daemon --stacktrace
+            ./gradlew :app:processDebugGoogleServices :app:assembleDebug --no-daemon --stacktrace
           else
-            gradle :app:assembleDebug --no-daemon --stacktrace
+            gradle :app:processDebugGoogleServices :app:assembleDebug --no-daemon --stacktrace
           fi
 
       - name: Verify Debug APK exists
@@ -116,6 +132,10 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      - name: Clean up ephemeral keystore
+      - name: Clean up temporary CI secrets and keystore
         if: always()
-        run: rm -f debug.keystore
+        run: |
+          rm -f debug.keystore
+          if [ "${DECODED_GOOGLE_SERVICES:-false}" = "true" ]; then
+            rm -f app/google-services.json
+          fi
