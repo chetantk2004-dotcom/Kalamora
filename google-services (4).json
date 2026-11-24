@@ -1,0 +1,158 @@
+{
+  "project_info": {
+    "project_number": "724886698476",
+    "project_id": "gen-lang-client-0585798077",
+    "storage_bucket": "gen-lang-client-0585798077.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:724886698476:android:bdea057ec52e9a155168c9",
+        "android_client_info": {
+          "package_name": "com.aistudio.englishseekhen.kxmpqz"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "724886698476-jduobjtc3g2d0r070f366o00o0us6dlt.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.aistudio.englishseekhen.kxmpqz",
+            "certificate_hash": "2a9c0572cc72815cac48c2d2e340487e63a5538e"
+          }
+        },
+        {
+          "client_id": "724886698476-tan6jfvrdpootflrqdnqn4qvaitp4uc4.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCSFJeY6Q7bEzyzCjImoVO2IoMSuLLYh8w"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "724886698476-tan6jfvrdpootflrqdnqn4qvaitp4uc4.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:724886698476:android:d335b328d02a85c55168c9",
+        "android_client_info": {
+          "package_name": "com.aistudio.kalamora.vkpqzx"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "724886698476-vj06hsq5l4gngkure1ddre9l2hf2g6v3.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.aistudio.kalamora.vkpqzx",
+            "certificate_hash": "76ddd7ac75a4861a4ce44a3d6ea307c2932c1788"
+          }
+        },
+        {
+          "client_id": "724886698476-tan6jfvrdpootflrqdnqn4qvaitp4uc4.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCSFJeY6Q7bEzyzCjImoVO2IoMSuLLYh8w"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "724886698476-tan6jfvrdpootflrqdnqn4qvaitp4uc4.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:724886698476:android:dff5fdac7eba515c5168c9",
+        "android_client_info": {
+          "package_name": "com.aistudio.travellerone.ktvnxp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "724886698476-de2cbgb8lb360eol9eqi127tk93nraos.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.aistudio.travellerone.ktvnxp",
+            "certificate_hash": "0001d14005dd4901619bfae6db838985f1801c2d"
+          }
+        },
+        {
+          "client_id": "724886698476-tan6jfvrdpootflrqdnqn4qvaitp4uc4.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCSFJeY6Q7bEzyzCjImoVO2IoMSuLLYh8w"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "724886698476-tan6jfvrdpootflrqdnqn4qvaitp4uc4.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:724886698476:android:e21962291f0851db5168c9",
+        "android_client_info": {
+          "package_name": "com.kalamora.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "724886698476-ii1sq09p8rc6lb2tfqeqddjpen6r6jo4.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.kalamora.app",
+            "certificate_hash": "76ddd7ac75a4861a4ce44a3d6ea307c2932c1788"
+          }
+        },
+        {
+          "client_id": "724886698476-tan6jfvrdpootflrqdnqn4qvaitp4uc4.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCSFJeY6Q7bEzyzCjImoVO2IoMSuLLYh8w"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "724886698476-tan6jfvrdpootflrqdnqn4qvaitp4uc4.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
